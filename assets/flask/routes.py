@@ -30,6 +30,10 @@ def shutdown():
     print("This Flask server is shutting down... Please close the window!")
     os.kill(os.getpid(), signal.SIGTERM)
 
+@app.route("/api/v1/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "healthy"}), 200
+
 @app.route("/api/v1/tts", methods=["POST"])
 def synthesize_text():
     if not request.is_json:
@@ -90,4 +94,4 @@ def synthesize_text():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="localhost", port=8000, threaded=True)
+    app.run(host="0.0.0.0", port=8000, threaded=True)

@@ -1,0 +1,9 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN pip install requests
+
+COPY scripts/load_test.py /app/scripts/
+
+ENTRYPOINT ["python", "/app/scripts/load_test.py"]
