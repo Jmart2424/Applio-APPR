@@ -16,6 +16,7 @@ RUN apt-get update && \
     python3-venv \
     git \
     ffmpeg \
+    curl \
     build-essential \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
