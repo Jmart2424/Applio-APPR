@@ -7,6 +7,7 @@ ENV PYTHONUNBUFFERED=1
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH=${CUDA_HOME}/bin:${PATH}
 ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV PYTHONPATH=/app:${PYTHONPATH}
 
 # Install system dependencies
 RUN apt-get update && \
@@ -23,6 +24,9 @@ RUN apt-get update && \
 # Set up working directory
 WORKDIR /app
 
+# Copy application files first
+COPY . .
+
 # Create and activate virtual environment
 RUN python3 -m venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
@@ -32,10 +36,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir python-ffmpeg && \
     pip install --no-cache-dir torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121 && \
     pip install --no-cache-dir gunicorn google-cloud-storage && \
-    if [ -f "requirements.txt" ]; then pip install --no-cache-dir -r requirements.txt; fi
-
-# Copy application files
-COPY . .
+    pip install --no-cache-dir -r requirements.txt
 
 # Create required directories
 RUN mkdir -p logs assets/audios rvc/models/pretraineds rvc/models/embedders rvc/models/predictors
