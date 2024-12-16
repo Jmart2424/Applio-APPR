@@ -18,7 +18,7 @@ pedalboard
 stftpitchshift
 
 # Machine learning and deep learning
-omegaconf>=2.0.6; sys_platform == 'darwin' 
+omegaconf>=2.0.6; sys_platform == 'darwin'
 numba; sys_platform == 'linux'
 numba==0.57.0; sys_platform == 'darwin' or sys_platform == 'win32'
 torch==2.3.1
@@ -36,10 +36,11 @@ tensorboard
 gradio==5.5.0
 
 # Miscellaneous utilities
-certifi>=2023.07.22; sys_platform == 'darwin'  
+certifi>=2023.07.22; sys_platform == 'darwin'
 antlr4-python3-runtime==4.8; sys_platform == 'darwin'
 tensorboardX
 edge-tts==6.1.9
 pypresence
 beautifulsoup4
-flaskgoogle-cloud-storage
+flask
+google-cloud-storage
