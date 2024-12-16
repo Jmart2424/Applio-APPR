@@ -1,9 +1,20 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-RUN pip install requests
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app:${PYTHONPATH}
 
-COPY scripts/load_test.py /app/scripts/
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["python", "/app/scripts/load_test.py"]
+RUN pip install --no-cache-dir edge-tts flask gunicorn
+
+COPY assets/flask/test_routes.py /app/assets/flask/routes.py
+RUN mkdir -p /app/assets/audios
+
+EXPOSE 8000
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "12", "--timeout", "300", "assets.flask.routes:app"]

@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  applio-tts-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./assets/audios:/app/assets/audios
