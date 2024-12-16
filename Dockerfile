@@ -11,7 +11,7 @@ ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    python3.12 \
+    python3.10 \
     python3-pip \
     python3-venv \
     git \
