@@ -53,4 +53,4 @@ VOLUME ["/app/logs", "/app/assets/audios", "/app/rvc/models"]
 EXPOSE 8000
 
 # Run with gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "12", "--timeout", "300", "--preload", "assets.flask.server:app"]
+CMD [".venv/bin/gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "12", "--timeout", "300", "--preload", "assets.flask.routes:app"]
