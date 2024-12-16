@@ -2,6 +2,8 @@ import os
 import sys
 import signal
 import time
+import asyncio
+import edge_tts
 from flask import Flask, request, redirect, jsonify
 from google.cloud import storage
 from concurrent.futures import ThreadPoolExecutor
@@ -9,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 now_dir = os.getcwd()
 sys.path.append(now_dir)
 
-from core import run_tts_script, run_download_script
+from core import run_infer_script, run_download_script, import_voice_converter
 
 app = Flask(__name__)
 executor = ThreadPoolExecutor(max_workers=50)  # High concurrency support
@@ -34,6 +36,34 @@ def shutdown():
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
+async def synthesize_tts(text, voice, rate=0):
+    """Synthesize text using edge-tts directly"""
+    output_path = os.path.join(now_dir, "assets", "audios", f"tts_output_{int(time.time())}.wav")
+    rates = f"+{rate}%" if rate >= 0 else f"{rate}%"
+    await edge_tts.Communicate(text, voice, rate=rates).save(output_path)
+    return output_path
+
+def run_synthesis(text, voice, rate, **kwargs):
+    """Run TTS synthesis and voice conversion in thread"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    tts_output = loop.run_until_complete(synthesize_tts(text, voice, rate))
+    loop.close()
+
+    # Run voice conversion if model is specified
+    if kwargs.get('pth_path'):
+        output_rvc = os.path.join(now_dir, "assets", "audios", f"tts_rvc_output_{int(time.time())}.wav")
+        infer_pipeline = import_voice_converter()
+        infer_pipeline.convert_audio(
+            audio_input_path=tts_output,
+            audio_output_path=output_rvc,
+            **kwargs
+        )
+        os.remove(tts_output)  # Clean up intermediate file
+        return f"Text synthesized and converted successfully.", output_rvc
+
+    return f"Text synthesized successfully.", tts_output
+
 @app.route("/api/v1/tts", methods=["POST"])
 def synthesize_text():
     if not request.is_json:
@@ -44,13 +74,12 @@ def synthesize_text():
         return jsonify({"error": "Missing text parameter"}), 400
 
     try:
-        # Run TTS synthesis in thread pool
+        # Run synthesis in thread pool
         future = executor.submit(
-            run_tts_script,
-            tts_file="",  # Empty for direct text input
-            tts_text=data["text"],
-            tts_voice=data.get("voice", "en-US-JennyNeural"),
-            tts_rate=data.get("speed", 0),
+            run_synthesis,
+            text=data["text"],
+            voice=data.get("voice", "en-US-JennyNeural"),
+            rate=data.get("speed", 0),
             pitch=data.get("pitch", 0),
             filter_radius=data.get("filter_radius", 3),
             index_rate=data.get("index_rate", 0.75),
@@ -58,8 +87,6 @@ def synthesize_text():
             protect=data.get("protect", 0.5),
             hop_length=data.get("hop_length", 128),
             f0_method=data.get("f0_method", "rmvpe"),
-            output_tts_path=os.path.join(now_dir, "assets", "audios", f"tts_output_{int(time.time())}.wav"),
-            output_rvc_path=os.path.join(now_dir, "assets", "audios", f"tts_rvc_output_{int(time.time())}.wav"),
             pth_path=data.get("model_file", ""),
             index_path=data.get("index_file", ""),
             split_audio=data.get("split_audio", False),
@@ -77,18 +104,25 @@ def synthesize_text():
         # Get result from future
         output_info, output_path = future.result()
 
-        # Upload to Google Cloud Storage
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(os.getenv("GCS_BUCKET_NAME"))
-        blob_name = f"tts_output_{int(time.time())}.{data.get('export_format', 'wav').lower()}"
-        blob = bucket.blob(blob_name)
-        blob.upload_from_filename(output_path)
-
-        return jsonify({
+        response_data = {
             "status": "success",
             "message": output_info,
-            "gcs_path": f"gs://{os.getenv('GCS_BUCKET_NAME')}/{blob_name}"
-        })
+            "local_path": output_path
+        }
+
+        # Upload to Google Cloud Storage if configured
+        if os.getenv("GCS_BUCKET_NAME"):
+            try:
+                storage_client = storage.Client()
+                bucket = storage_client.bucket(os.getenv("GCS_BUCKET_NAME"))
+                blob_name = f"tts_output_{int(time.time())}.{data.get('export_format', 'wav').lower()}"
+                blob = bucket.blob(blob_name)
+                blob.upload_from_filename(output_path)
+                response_data["gcs_path"] = f"gs://{os.getenv('GCS_BUCKET_NAME')}/{blob_name}"
+            except Exception as gcs_error:
+                response_data["gcs_error"] = str(gcs_error)
+
+        return jsonify(response_data)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
