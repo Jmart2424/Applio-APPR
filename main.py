@@ -24,7 +24,7 @@ Authentication:
 
 from fastapi import FastAPI, Security, Depends, HTTPException, Request
 from fastapi.security.api_key import APIKeyHeader
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from gradio.routes import mount_gradio_app
 import uvicorn
 from app import Applio
@@ -133,11 +133,17 @@ async def tts_rvc_endpoint(request: RVCTTSRequest):
         # Perform voice conversion
         converter.convert_audio(**rvc_params)
 
-        return JSONResponse({
-            "status": "success",
-            "message": f"Text '{request.text}' synthesized successfully with Morgan Freeman's voice.",
-            "audio_path": rvc_params["audio_output_path"]
-        })
+        # Return the audio file directly
+        return FileResponse(
+            path=rvc_params["audio_output_path"],
+            media_type="audio/wav",
+            filename=f"morgan_freeman_{request.text[:30]}.wav"
+        )
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate audio file"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
