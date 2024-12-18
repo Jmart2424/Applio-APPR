@@ -107,20 +107,48 @@ async def tts_endpoint(request: TTSRequest):
 @app.post("/api/tts-rvc", dependencies=[Security(get_api_key)])
 async def tts_rvc_endpoint(request: RVCTTSRequest):
     try:
+        print(f"Processing request for text: {request.text}")
+
         # Generate TTS audio with Guy Neural voice
         tts = edge_tts.Communicate(text=request.text, voice=request.voice)
         audio_path = os.path.join("assets", "tts", "rvc_tts.wav")
+        print(f"Generating TTS audio at: {audio_path}")
         await tts.save(audio_path)
 
+        if not os.path.exists(audio_path):
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate TTS audio file"
+            )
+        print(f"TTS audio generated successfully: {os.path.getsize(audio_path)} bytes")
+
+        # Check RVC model files
+        model_path = os.path.join("logs", "weights", "RVC", "Morgan-Freeman.pth")
+        index_path = os.path.join("logs", "weights", "RVC", "added_IVF455_Flat_nprobe_1_Morgan-Freeman_v2.index")
+
+        if not os.path.exists(model_path):
+            raise HTTPException(
+                status_code=500,
+                detail=f"RVC model not found at: {model_path}"
+            )
+        if not os.path.exists(index_path):
+            raise HTTPException(
+                status_code=500,
+                detail=f"RVC index not found at: {index_path}"
+            )
+        print(f"RVC model files found: {model_path}, {index_path}")
+
         # Initialize voice converter
+        print("Initializing voice converter")
         converter = VoiceConverter()
 
         # RVC conversion parameters
+        output_path = os.path.join("assets", "tts", f"morgan_freeman_{request.text[:30]}.wav")
         rvc_params = {
             "audio_input_path": audio_path,
-            "audio_output_path": os.path.join("assets", "tts", "rvc_output.wav"),
-            "model_path": os.path.join("logs", "weights", "RVC", "Morgan-Freeman.pth"),
-            "index_path": os.path.join("logs", "weights", "RVC", "added_IVF455_Flat_nprobe_1_Morgan-Freeman_v2.index"),
+            "audio_output_path": output_path,
+            "model_path": model_path,
+            "index_path": index_path,
             "index_rate": 0.75,  # Default for good voice similarity
             "protect": 0.5,      # Protect voiceless consonants
             "f0_method": "rmvpe",
@@ -130,24 +158,45 @@ async def tts_rvc_endpoint(request: RVCTTSRequest):
             "export_format": "WAV"
         }
 
+        print(f"Starting RVC conversion with params: {rvc_params}")
         # Perform voice conversion
         converter.convert_audio(**rvc_params)
 
+        # Verify output file exists and has content
+        if not os.path.exists(output_path):
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate RVC audio file"
+            )
+
+        file_size = os.path.getsize(output_path)
+        print(f"RVC conversion complete. Output file size: {file_size} bytes")
+
+        if file_size == 0:
+            raise HTTPException(
+                status_code=500,
+                detail="Generated audio file is empty"
+            )
+
+        print(f"Returning WAV file: {output_path}")
         # Return the audio file directly
         return FileResponse(
-            path=rvc_params["audio_output_path"],
+            path=output_path,
             media_type="audio/wav",
-            filename=f"morgan_freeman_{request.text[:30]}.wav"
+            filename=os.path.basename(output_path)
         )
-    except FileNotFoundError:
+
+    except FileNotFoundError as e:
+        print(f"File not found error: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Failed to generate audio file"
+            detail=f"Audio file not found: {str(e)}"
         )
     except Exception as e:
+        print(f"Error during processing: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=f"Error processing audio: {str(e)}"
         )
 
 # Mount Gradio app
