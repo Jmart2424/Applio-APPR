@@ -1,10 +1,10 @@
 {
-  "name": "Applio TTS Testing",
+  "name": "Applio TTS-RVC Testing",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "test-tts",
+        "path": "test-tts-rvc",
         "options": {}
       },
       "id": "webhook-node",
@@ -15,13 +15,13 @@
     },
     {
       "parameters": {
-        "url": "https://user:22de20048c03a30baa46da2d28743a60@docker-api-test-app-tunnel-ripkay12.devinapps.com/api/tts",
+        "url": "http://localhost:8080/api/tts-rvc",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "X-API-Key",
-              "value": "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"
+              "value": "${APPLIO_API_WRITE}"
             },
             {
               "name": "Content-Type",
@@ -38,14 +38,14 @@
             },
             {
               "name": "voice",
-              "value": "={{ $json.voice }}"
+              "value": "en-US-GuyNeural"
             }
           ]
         },
         "options": {}
       },
       "id": "http-request-node",
-      "name": "TTS Request",
+      "name": "TTS-RVC Request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [450, 300]
@@ -56,7 +56,7 @@
       "main": [
         [
           {
-            "node": "TTS Request",
+            "node": "TTS-RVC Request",
             "type": "main",
             "index": 0
           }

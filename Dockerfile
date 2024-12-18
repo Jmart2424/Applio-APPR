@@ -13,8 +13,15 @@ RUN apt update && \
     apt install -y -qq ffmpeg && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
+# Create RVC model directory
+RUN mkdir -p /app/logs/weights/RVC
+
 # Copy application files into the container
 COPY . .
+
+# Copy RVC models
+COPY logs/weights/RVC/Morgan-Freeman.pth /app/logs/weights/RVC/
+COPY logs/weights/RVC/added_IVF455_Flat_nprobe_1_Morgan-Freeman_v2.index /app/logs/weights/RVC/
 
 # Create a virtual environment in the app directory and install dependencies
 RUN python3 -m venv /app/.venv && \
