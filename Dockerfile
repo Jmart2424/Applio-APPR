@@ -13,8 +13,9 @@ RUN apt update && \
     apt install -y -qq ffmpeg && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
-# Create RVC model directory
-RUN mkdir -p /app/logs/weights/RVC
+# Create required directories
+RUN mkdir -p /app/logs/weights/RVC && \
+    mkdir -p /app/assets/tts
 
 # Copy application files into the container
 COPY . .
@@ -32,7 +33,7 @@ RUN python3 -m venv /app/.venv && \
     if [ -f "requirements.txt" ]; then pip install --no-cache-dir -r requirements.txt; fi
 
 # Define volumes for persistent storage
-VOLUME ["/app/logs/"]
+VOLUME ["/app/logs/", "/app/assets/"]
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
