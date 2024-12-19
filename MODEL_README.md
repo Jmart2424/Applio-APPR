@@ -1,0 +1,1 @@
+# Model Files\n\n## Required Models\nThe following model files are required for the TTS-RVC endpoint:\n\n### Morgan Freeman Voice Model\n- Model file: `logs/weights/RVC/Morgan-Freeman.pth`\n- Index file: `logs/weights/RVC/added_IVF455_Flat_nprobe_1_Morgan-Freeman_v2.index`\n- MD5 Checksum: 8821a981e7e9841506dae790336ea9d7
